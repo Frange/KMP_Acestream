@@ -1,11 +1,15 @@
 package com.frange.kmpacestream
 
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import com.frange.kmpacestream.di.appModule
+import com.frange.kmpacestream.presentation.main.MainScreen
 import com.frange.kmpacestream.shared.di.sharedModule
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
+import java.awt.Dimension
 import java.io.File
 
 fun startAceStreamEngine() {
@@ -74,9 +78,14 @@ fun main() {
 
         Window(
             onCloseRequest = ::exitApplication,
-            title = "KMP Acestream"
+            title = "KMP Acestream",
+            state = rememberWindowState(
+                width = 1100.dp,
+                height = 700.dp
+            )
         ) {
-            App()
+            window.minimumSize = Dimension(950, 600)
+            MainScreen()
         }
     }
 }
