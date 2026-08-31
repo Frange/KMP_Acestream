@@ -3,20 +3,10 @@ package com.frange.kmpacestream.presentation.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,19 +21,23 @@ import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.RenderCallback
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.format.RV32BufferFormat
-import java.awt.Frame
 import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
 import java.nio.ByteBuffer
 import javax.swing.SwingUtilities
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 actual fun VideoPlayer(
     url: String,
+    initialBufferSeconds: Int,
+    onBufferChanged: (Int) -> Unit,
+    onToggleFullScreen: () -> Unit,
     modifier: Modifier
 ) {
     var currentFrame by remember { mutableStateOf<ImageBitmap?>(null) }
-    var bufferSeconds by remember { mutableIntStateOf(3) } // Buffer por defecto (3s)
+    var bufferSeconds by remember { mutableIntStateOf(initialBufferSeconds) }
+    var isPlaying by remember { mutableStateOf(false) }
 
     val mediaPlayerFactory = remember {
         MediaPlayerFactory(
@@ -58,19 +52,14 @@ actual fun VideoPlayer(
         if (url.isNotEmpty()) {
             val options = arrayOf(":network-caching=${bufferSeconds * 1000}")
             mediaPlayer.media().play(url, *options)
+            isPlaying = true
         }
     }
 
-    fun toggleFullScreen() {
-        val window = Frame.getFrames().firstOrNull { it.isVisible }
-        if (window != null) {
-            val device = window.graphicsConfiguration.device
-            if (device.fullScreenWindow == window) {
-                device.fullScreenWindow = null
-            } else {
-                device.fullScreenWindow = window
-            }
-        }
+    fun stopPlayback() {
+        mediaPlayer.controls().stop()
+        isPlaying = false
+        currentFrame = null // Limpia el fotograma al parar
     }
 
     DisposableEffect(url) {
@@ -98,6 +87,7 @@ actual fun VideoPlayer(
 
                 SwingUtilities.invokeLater {
                     currentFrame = bitmap
+                    isPlaying = true
                 }
             }
         }
@@ -116,7 +106,7 @@ actual fun VideoPlayer(
         playWithCurrentBuffer()
 
         onDispose {
-            mediaPlayer.controls().stop()
+            stopPlayback()
             mediaPlayer.release()
             mediaPlayerFactory.release()
         }
@@ -131,101 +121,95 @@ actual fun VideoPlayer(
             )
         }
 
-        // Overlay de controles superiores
-        Row(
+        // Botón FullScreen en la esquina superior derecha
+        Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(12.dp)
-                .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(8.dp))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(14.dp)
+                .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(8.dp))
+                .clickable { onToggleFullScreen() }
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = "⛶",
+                color = Color.White,
+                fontSize = 22.sp
+            )
+        }
+
+        // Barra de Controles Simplificada y Centrada Abajo
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+                .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Play / Pause
-            Text(
-                text = if (mediaPlayer.status().isPlaying) "⏸" else "▶",
-                color = Color.White,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clickable {
-                        if (mediaPlayer.status().isPlaying) {
-                            mediaPlayer.controls().pause()
-                        } else {
-                            mediaPlayer.controls().play()
-                        }
-                    }
-                    .padding(2.dp)
-            )
+            // Botón Play (Verde) / Stop (Rojo)
+            if (!isPlaying) {
+                Text(
+                    text = "▶",
+                    color = Color.Green,
+                    fontSize = 24.sp,
+                    modifier = Modifier
+                        .clickable { playWithCurrentBuffer() }
+                        .padding(4.dp)
+                )
+            } else {
+                Text(
+                    text = "⏹",
+                    color = Color.Red,
+                    fontSize = 24.sp,
+                    modifier = Modifier
+                        .clickable { stopPlayback() }
+                        .padding(4.dp)
+                )
+            }
 
-            // Stop
-            Text(
-                text = "⏹",
-                color = Color.White,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clickable { mediaPlayer.controls().stop() }
-                    .padding(2.dp)
-            )
-
-            // Ir al Directo (reenganchar stream)
-            Text(
-                text = "🔄 Directo",
-                color = Color.Cyan,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .clickable { playWithCurrentBuffer() }
-                    .padding(2.dp)
-            )
-
-            // Ajuste de Buffer (Subir / Bajar en segundos)
+            // Selector de Buffer en segundos (Aplica y relanza al directo automáticamente)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // Botón Play (Verde) / Stop (Rojo)
                 Text(
-                    text = "-",
-                    color = Color.Yellow,
-                    fontSize = 16.sp,
+                    text = if (!isPlaying) "▶" else "⏹",
+                    color = if (!isPlaying) Color.Green else Color.Red,
+                    fontSize = 24.sp,
                     modifier = Modifier
                         .clickable {
-                            if (bufferSeconds > 1) {
-                                bufferSeconds--
+                            if (isPlaying) {
+                                stopPlayback() 
+                            } else {
                                 playWithCurrentBuffer()
                             }
                         }
-                        .padding(horizontal = 4.dp)
+                        .padding(4.dp)
                 )
 
                 Text(
                     text = "Buf: ${bufferSeconds}s",
                     color = Color.White,
-                    fontSize = 12.sp
+                    fontSize = 16.sp
                 )
 
                 Text(
-                    text = "+",
+                    text = "➕",
                     color = Color.Yellow,
-                    fontSize = 16.sp,
+                    fontSize = 18.sp,
                     modifier = Modifier
                         .clickable {
                             if (bufferSeconds < 30) {
                                 bufferSeconds++
+                                onBufferChanged(bufferSeconds)
                                 playWithCurrentBuffer()
                             }
                         }
-                        .padding(horizontal = 4.dp)
+                        .padding(4.dp)
                 )
             }
-
-            // Pantalla completa
-            Text(
-                text = "⛶",
-                color = Color.White,
-                fontSize = 16.sp,
-                modifier = Modifier
-                    .clickable { toggleFullScreen() }
-                    .padding(2.dp)
-            )
         }
     }
 }
