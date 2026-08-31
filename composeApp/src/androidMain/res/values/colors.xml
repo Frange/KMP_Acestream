@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+
+    <color name="primary">#2BA9BC</color>
+    <color name="secondary">#1A98AB</color>
+
+    <color name="primary_text">#000000</color>
+    <color name="secondary_text">#FFFFFF</color>
+    <color name="third_text">#2BA9BC</color>
+
+    <color name="always_white">#FFFFFF</color>
+    <color name="always_black">#000000</color>
+    <color name="always_dark_gray">#303034</color>
+    <color name="always_blue">#2BA9BC</color>
+    <color name="always_red">#FF0000</color>
+    <color name="always_gray">#CCCCCC</color>
+
+    <color name="primary_background">#FFFFFF</color>
+    <color name="secondary_background">#2BA9BC</color>
+
+    <color name="card_background">@color/always_blue</color>
+    <color name="widget_background">@color/always_dark_gray</color>
+    <color name="widget_row_background">@color/always_dark_gray</color>
+</resources>
