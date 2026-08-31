@@ -9,6 +9,9 @@ import androidx.compose.ui.Modifier
 @Composable
 actual fun VideoPlayer(
     url: String,
+    initialBufferSeconds: Int,
+    onBufferChanged: (Int) -> Unit,
+    onToggleFullScreen: () -> Unit,
     modifier: Modifier
 ) {
     // Placeholder temporal para Android hasta implementar ExoPlayer/Media3

@@ -19,10 +19,55 @@ import com.frange.kmpacestream.shared.domain.model.StreamItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import java.awt.Frame
+import java.io.File
 import java.net.URL
 import kotlin.time.Duration.Companion.milliseconds
+
+object StreamFavoritesManager {
+    private val favoritesFile: File
+        get() {
+            val userDir = System.getProperty("user.home")
+            val appDir = File(userDir, ".kmpacestream").apply { mkdirs() }
+            return File(appDir, "favorites.json")
+        }
+
+    fun load(): List<StreamItem> {
+        return try {
+            if (favoritesFile.exists()) {
+                val jsonString = favoritesFile.readText()
+                Json.decodeFromString(ListSerializer(StreamItem.serializer()), jsonString)
+            } else {
+                emptyList()
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun save(items: List<StreamItem>) {
+        try {
+            val jsonString = Json.encodeToString(ListSerializer(StreamItem.serializer()), items)
+            favoritesFile.writeText(jsonString)
+        } catch (_: Exception) { }
+    }
+}
+
+private fun getInitialStreamList(): List<StreamItem> {
+    val saved = StreamFavoritesManager.load()
+    return if (saved.isNotEmpty()) {
+        saved
+    } else {
+        listOf(
+            StreamItem("118416583faa3fb4f03800173429b6b844b43a52", "Test funcional nisu", isFavorite = true),
+            StreamItem("071b49a1c52d304cae6300e2776022eec7ebe6cd", "Canal de Prueba 2")
+        )
+    }
+}
 
 @Composable
 fun MainScreen(
@@ -30,25 +75,13 @@ fun MainScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var contentIdInput by remember { mutableStateOf("") }
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Favoritos, 1: Recientes
+    var selectedTab by remember { mutableIntStateOf(0) }
     var showStatsOverlay by remember { mutableStateOf(true) }
     var isFullscreen by remember { mutableStateOf(false) }
 
     var savedBufferSeconds by remember { mutableIntStateOf(3) }
 
-    var jsonStreams by remember {
-        mutableStateOf(
-            listOf(
-                StreamItem(
-                    "118416583faa3fb4f03800173429b6b844b43a52",
-                    "Test funcional nisu",
-                    isFavorite = true
-                ),
-                StreamItem("071b49a1c52d304cae6300e2776022eec7ebe6cd", "Canal de Prueba 2")
-            )
-        )
-    }
-
+    var jsonStreams by remember { mutableStateOf(getInitialStreamList()) }
     var recentStreams by remember { mutableStateOf(listOf<StreamItem>()) }
     var liveStats by remember { mutableStateOf(AceStreamStats()) }
 
@@ -74,19 +107,13 @@ fun MainScreen(
 
         viewModel.playContent(cleanId)
 
-        val existing =
-            jsonStreams.find { it.id == cleanId } ?: recentStreams.find { it.id == cleanId }
+        val existing = jsonStreams.find { it.id == cleanId } ?: recentStreams.find { it.id == cleanId }
         val streamName = name ?: existing?.name ?: cleanId
 
-        val newItem =
-            StreamItem(id = cleanId, name = streamName, isFavorite = existing?.isFavorite ?: false)
-
-        if (!recentStreams.any { it.id == cleanId }) {
-            recentStreams = listOf(newItem) + recentStreams
-        }
+        val newItem = StreamItem(id = cleanId, name = streamName, isFavorite = existing?.isFavorite ?: false)
+        recentStreams = listOf(newItem) + recentStreams.filter { it.id != cleanId }
     }
 
-    // Polling de estadísticas de AceStream
     LaunchedEffect(uiState) {
         val playingState = uiState as? MainUiState.Playing
         if (playingState != null && playingState.streamUrl.isNotBlank()) {
@@ -98,8 +125,7 @@ fun MainScreen(
                         val connection = URL(statUrl).openConnection()
                         connection.connectTimeout = 1000
                         connection.readTimeout = 1000
-                        val jsonStr =
-                            connection.getInputStream().bufferedReader().use { it.readText() }
+                        val jsonStr = connection.getInputStream().bufferedReader().use { it.readText() }
 
                         fun extractInt(key: String): Int {
                             val regex = "\"$key\":\\s*(-?\\d+)".toRegex()
@@ -111,8 +137,7 @@ fun MainScreen(
                         val peers = extractInt("peers")
                         val progress = extractInt("progress")
                         val bufferPieces = extractInt("buffer_pieces")
-                        val calculatedBuffer =
-                            if (progress > 0) progress else if (bufferPieces > 0) (bufferPieces * 100) / 15 else 0
+                        val calculatedBuffer = if (progress > 0) progress else if (bufferPieces > 0) (bufferPieces * 100) / 15 else 0
                         val isLive = extractInt("is_live") != 0
 
                         withContext(Dispatchers.Main) {
@@ -125,15 +150,13 @@ fun MainScreen(
                             )
                         }
                     }
-                } catch (_: Exception) {
-                }
+                } catch (_: Exception) { }
                 delay(1000.milliseconds)
             }
         }
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
-        // Panel lateral (Se oculta en Fullscreen)
         if (!isFullscreen) {
             Column(
                 modifier = Modifier
@@ -166,16 +189,9 @@ fun MainScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Pestañas simplificadas: Solo Favoritos y Recientes
                 TabRow(selectedTabIndex = selectedTab) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Favoritos") })
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Recientes") })
+                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Favoritos") })
+                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Recientes") })
                 }
 
                 val currentList = when (selectedTab) {
@@ -187,12 +203,7 @@ fun MainScreen(
                     items(currentList, key = { it.id }) { item ->
                         ListItem(
                             headlineContent = { Text(item.name, maxLines = 1) },
-                            supportingContent = {
-                                Text(
-                                    item.id.take(16) + "...",
-                                    fontSize = 11.sp
-                                )
-                            },
+                            supportingContent = { Text(item.id.take(16) + "...", fontSize = 11.sp) },
                             leadingContent = {
                                 Text(
                                     text = if (item.isFavorite) "★" else "☆",
@@ -200,6 +211,7 @@ fun MainScreen(
                                         jsonStreams = jsonStreams.map {
                                             if (it.id == item.id) it.copy(isFavorite = !it.isFavorite) else it
                                         }
+                                        StreamFavoritesManager.save(jsonStreams)
                                     },
                                     fontSize = 20.sp,
                                     color = if (item.isFavorite) Color(0xFFFFD700) else Color.Gray
@@ -207,7 +219,6 @@ fun MainScreen(
                             },
                             trailingContent = {
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    // Botón Lápiz para Editar
                                     Text(
                                         text = "✏️",
                                         modifier = Modifier
@@ -218,15 +229,13 @@ fun MainScreen(
                                             .padding(4.dp),
                                         fontSize = 14.sp
                                     )
-                                    // Botón Papelera para Borrar
                                     Text(
                                         text = "🗑️",
                                         modifier = Modifier
                                             .clickable {
-                                                jsonStreams =
-                                                    jsonStreams.filter { it.id != item.id }
-                                                recentStreams =
-                                                    recentStreams.filter { it.id != item.id }
+                                                jsonStreams = jsonStreams.filter { it.id != item.id }
+                                                StreamFavoritesManager.save(jsonStreams)
+                                                recentStreams = recentStreams.filter { it.id != item.id }
                                             }
                                             .padding(4.dp),
                                         fontSize = 14.sp
@@ -248,15 +257,11 @@ fun MainScreen(
                     onClick = { showStatsOverlay = !showStatsOverlay },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        if (showStatsOverlay) "Ocultar Stats" else "Mostrar Stats",
-                        fontSize = 13.sp
-                    )
+                    Text(if (showStatsOverlay) "Ocultar Stats" else "Mostrar Stats", fontSize = 13.sp)
                 }
             }
         }
 
-        // Reproductor y Estadísticas
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -272,7 +277,6 @@ fun MainScreen(
                     is MainUiState.Idle -> {
                         Text("Introduce un Content ID o selecciona un canal para reproducir.")
                     }
-
                     is MainUiState.Loading -> {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -282,14 +286,12 @@ fun MainScreen(
                             Text("Cargando Stream AceStream...")
                         }
                     }
-
                     is MainUiState.Error -> {
                         Text(
                             text = state.error.toUiText(),
                             color = MaterialTheme.colorScheme.error
                         )
                     }
-
                     is MainUiState.Playing -> {
                         VideoPlayer(
                             url = state.streamUrl,
@@ -319,33 +321,20 @@ fun MainScreen(
                             color = if (liveStats.isLive) Color.Red else Color.Gray,
                             fontSize = 12.sp
                         )
-                        Text(
-                            "Bajada: ${liveStats.downloadSpeedKbps} KB/s",
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
-                        Text(
-                            "Subida: ${liveStats.uploadSpeedKbps} KB/s",
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
+                        Text("Bajada: ${liveStats.downloadSpeedKbps} KB/s", color = Color.White, fontSize = 12.sp)
+                        Text("Subida: ${liveStats.uploadSpeedKbps} KB/s", color = Color.White, fontSize = 12.sp)
                         Text(
                             text = "Buffer: ${liveStats.bufferPercentage}% (~${savedBufferSeconds}s)",
                             color = Color.White,
                             fontSize = 12.sp
                         )
-                        Text(
-                            "Peers: ${liveStats.peersCount}",
-                            color = Color.White,
-                            fontSize = 12.sp
-                        )
+                        Text("Peers: ${liveStats.peersCount}", color = Color.White, fontSize = 12.sp)
                     }
                 }
             }
         }
     }
 
-    // Diálogo emergente para editar el nombre de un canal con el lápiz
     if (channelToEdit != null) {
         AlertDialog(
             onDismissRequest = { channelToEdit = null },
@@ -364,6 +353,8 @@ fun MainScreen(
                     jsonStreams = jsonStreams.map {
                         if (it.id == targetId) it.copy(name = editedNameInput) else it
                     }
+                    StreamFavoritesManager.save(jsonStreams)
+
                     recentStreams = recentStreams.map {
                         if (it.id == targetId) it.copy(name = editedNameInput) else it
                     }

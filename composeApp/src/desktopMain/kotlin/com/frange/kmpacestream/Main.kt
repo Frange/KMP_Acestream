@@ -11,24 +11,39 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import java.awt.Dimension
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 fun startAceStreamEngine() {
     val os = System.getProperty("os.name").lowercase()
 
     when {
         os.contains("win") -> {
-            val engineDir = File("resources/engine_win")
-            val winExecutable = File(engineDir, "ace_engine.exe")
+            try {
+                val engineDir = File(System.getProperty("java.io.tmpdir"), "kmp-acestream-engine")
+                if (!engineDir.exists()) engineDir.mkdirs()
 
-            if (winExecutable.exists()) {
-                try {
-                    ProcessBuilder(winExecutable.absolutePath, "--g2g-port", "6878")
-                        .directory(engineDir)
-                        .start()
-                    println("Ace Stream Engine iniciado en Windows.")
-                } catch (e: Exception) {
-                    println("Error en Windows: ${e.message}")
+                val winExecutable = File(engineDir, "ace_engine.exe")
+
+                // Si no está extraído todavía, lo leemos de los recursos de Compose Desktop
+                if (!winExecutable.exists()) {
+                    object {}::class.java.getResourceAsStream("/engine_win/ace_engine.exe")?.use { input ->
+                        Files.copy(input, winExecutable.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                    }
+                    // Nota: Si tu carpeta engine_win tiene más DLLs o dependencias,
+                    // tendrías que copiarlas aquí también de la misma manera.
                 }
+
+                if (winExecutable.exists()) {
+                    ProcessBuilder(winExecutable.absolutePath, "--g2g-port", "6878")
+                        .directory(engineDir) // Directorio de trabajo para que la caché se genere aquí
+                        .start()
+                    println("Ace Stream Engine iniciado en Windows desde la ruta temporal.")
+                } else {
+                    println("Error: No se pudo extraer el ejecutable de Ace Stream desde los recursos.")
+                }
+            } catch (e: Exception) {
+                println("Error en Windows: ${e.message}")
             }
         }
 
