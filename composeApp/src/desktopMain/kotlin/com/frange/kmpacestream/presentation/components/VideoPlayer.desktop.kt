@@ -25,7 +25,6 @@ import java.awt.image.BufferedImage
 import java.awt.image.DataBufferInt
 import java.nio.ByteBuffer
 import javax.swing.SwingUtilities
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 actual fun VideoPlayer(
@@ -59,7 +58,7 @@ actual fun VideoPlayer(
     fun stopPlayback() {
         mediaPlayer.controls().stop()
         isPlaying = false
-        currentFrame = null // Limpia el fotograma al parar
+        currentFrame = null
     }
 
     DisposableEffect(url) {
@@ -147,42 +146,37 @@ actual fun VideoPlayer(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón Play (Verde) / Stop (Rojo)
-            if (!isPlaying) {
-                Text(
-                    text = "▶",
-                    color = Color.Green,
-                    fontSize = 24.sp,
-                    modifier = Modifier
-                        .clickable { playWithCurrentBuffer() }
-                        .padding(4.dp)
-                )
-            } else {
-                Text(
-                    text = "⏹",
-                    color = Color.Red,
-                    fontSize = 24.sp,
-                    modifier = Modifier
-                        .clickable { stopPlayback() }
-                        .padding(4.dp)
-                )
-            }
+            // Botón Play (Verde) / Stop (Rojo) inmediato
+            Text(
+                text = if (!isPlaying) "▶" else "⏹",
+                color = if (!isPlaying) Color.Green else Color.Red,
+                fontSize = 24.sp,
+                modifier = Modifier
+                    .clickable {
+                        if (isPlaying) {
+                            isPlaying = false // Forzar cambio de estado inmediato
+                            stopPlayback()
+                        } else {
+                            playWithCurrentBuffer()
+                        }
+                    }
+                    .padding(4.dp)
+            )
 
             // Selector de Buffer en segundos (Aplica y relanza al directo automáticamente)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón Play (Verde) / Stop (Rojo)
                 Text(
-                    text = if (!isPlaying) "▶" else "⏹",
-                    color = if (!isPlaying) Color.Green else Color.Red,
-                    fontSize = 24.sp,
+                    text = "➖",
+                    color = Color.Yellow,
+                    fontSize = 18.sp,
                     modifier = Modifier
                         .clickable {
-                            if (isPlaying) {
-                                stopPlayback() 
-                            } else {
+                            if (bufferSeconds > 1) {
+                                bufferSeconds--
+                                onBufferChanged(bufferSeconds)
                                 playWithCurrentBuffer()
                             }
                         }
