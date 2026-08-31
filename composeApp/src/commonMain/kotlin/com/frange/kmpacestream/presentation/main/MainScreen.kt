@@ -5,11 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.frange.kmpacestream.presentation.components.VideoPlayer
@@ -29,17 +32,35 @@ import java.net.URL
 import kotlin.time.Duration.Companion.milliseconds
 
 object StreamFavoritesManager {
-    private val favoritesFile: File
+    private val appDir: File
         get() {
             val userDir = System.getProperty("user.home")
-            val appDir = File(userDir, ".kmpacestream").apply { mkdirs() }
-            return File(appDir, "favorites.json")
+            return File(userDir, ".kmpacestream").apply { mkdirs() }
         }
 
-    fun load(): List<StreamItem> {
+    private val favoritesFile: File get() = File(appDir, "favorites.json")
+    private val recentsFile: File get() = File(appDir, "recents.json")
+
+    fun loadFavorites(): List<StreamItem> {
+        return loadFromFile(favoritesFile).distinctBy { it.id }
+    }
+
+    fun saveFavorites(items: List<StreamItem>) {
+        saveToFile(favoritesFile, items.distinctBy { it.id })
+    }
+
+    fun loadRecents(): List<StreamItem> {
+        return loadFromFile(recentsFile).distinctBy { it.id }.take(30)
+    }
+
+    fun saveRecents(items: List<StreamItem>) {
+        saveToFile(recentsFile, items.distinctBy { it.id }.take(30))
+    }
+
+    private fun loadFromFile(file: File): List<StreamItem> {
         return try {
-            if (favoritesFile.exists()) {
-                val jsonString = favoritesFile.readText()
+            if (file.exists()) {
+                val jsonString = file.readText()
                 Json.decodeFromString(ListSerializer(StreamItem.serializer()), jsonString)
             } else {
                 emptyList()
@@ -49,16 +70,16 @@ object StreamFavoritesManager {
         }
     }
 
-    fun save(items: List<StreamItem>) {
+    private fun saveToFile(file: File, items: List<StreamItem>) {
         try {
             val jsonString = Json.encodeToString(ListSerializer(StreamItem.serializer()), items)
-            favoritesFile.writeText(jsonString)
+            file.writeText(jsonString)
         } catch (_: Exception) { }
     }
 }
 
 private fun getInitialStreamList(): List<StreamItem> {
-    val saved = StreamFavoritesManager.load()
+    val saved = StreamFavoritesManager.loadFavorites()
     return if (saved.isNotEmpty()) {
         saved
     } else {
@@ -78,15 +99,25 @@ fun MainScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var showStatsOverlay by remember { mutableStateOf(true) }
     var isFullscreen by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
     var savedBufferSeconds by remember { mutableIntStateOf(3) }
 
     var jsonStreams by remember { mutableStateOf(getInitialStreamList()) }
-    var recentStreams by remember { mutableStateOf(listOf<StreamItem>()) }
+    var recentStreams by remember { mutableStateOf(StreamFavoritesManager.loadRecents()) }
     var liveStats by remember { mutableStateOf(AceStreamStats()) }
 
     var channelToEdit by remember { mutableStateOf<StreamItem?>(null) }
     var editedNameInput by remember { mutableStateOf("") }
+
+    fun cleanContentId(rawId: String): String {
+        val trimmed = rawId.trim()
+        return if (trimmed.startsWith("acestream://", ignoreCase = true)) {
+            trimmed.removePrefix("acestream://").removePrefix("ACESTREAM://")
+        } else {
+            trimmed
+        }
+    }
 
     fun toggleWindowFullScreen() {
         isFullscreen = !isFullscreen
@@ -102,7 +133,7 @@ fun MainScreen(
     }
 
     fun handlePlayContent(id: String, name: String? = null) {
-        val cleanId = id.trim()
+        val cleanId = cleanContentId(id)
         if (cleanId.isBlank()) return
 
         viewModel.playContent(cleanId)
@@ -110,8 +141,19 @@ fun MainScreen(
         val existing = jsonStreams.find { it.id == cleanId } ?: recentStreams.find { it.id == cleanId }
         val streamName = name ?: existing?.name ?: cleanId
 
-        val newItem = StreamItem(id = cleanId, name = streamName, isFavorite = existing?.isFavorite ?: false)
+        val isFav = existing?.isFavorite ?: false
+        val newItem = StreamItem(id = cleanId, name = streamName, isFavorite = isFav)
+
         recentStreams = listOf(newItem) + recentStreams.filter { it.id != cleanId }
+        if (recentStreams.size > 30) {
+            recentStreams = recentStreams.take(30)
+        }
+        StreamFavoritesManager.saveRecents(recentStreams)
+
+        if (isFav && jsonStreams.none { it.id == cleanId }) {
+            jsonStreams = (listOf(newItem) + jsonStreams).distinctBy { it.id }
+            StreamFavoritesManager.saveFavorites(jsonStreams)
+        }
     }
 
     LaunchedEffect(uiState) {
@@ -173,9 +215,11 @@ fun MainScreen(
                     OutlinedTextField(
                         value = contentIdInput,
                         onValueChange = { contentIdInput = it },
-                        label = { Text("Content ID") },
+                        label = { Text("Content ID", fontSize = 13.sp) },
                         singleLine = true,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        textStyle = TextStyle(fontSize = 13.sp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                     )
 
                     Button(
@@ -187,38 +231,112 @@ fun MainScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Favoritos") })
                     Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Recientes") })
                 }
 
-                val currentList = when (selectedTab) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+//                OutlinedTextField(
+//                    value = searchQuery,
+//                    onValueChange = { searchQuery = it },
+//                    placeholder = { Text("Filtrar canales...", fontSize = 13.sp) },
+//                    singleLine = true,
+//                    modifier = Modifier.fillMaxWidth(),
+//                    textStyle = TextStyle(fontSize = 13.sp)
+//                )
+//
+//                Spacer(modifier = Modifier.height(8.dp))
+
+                val rawList = when (selectedTab) {
                     0 -> jsonStreams.filter { it.isFavorite }
                     else -> recentStreams
                 }
 
+                val currentList = if (searchQuery.isBlank()) {
+                    rawList
+                } else {
+                    rawList.filter {
+                        it.name.contains(searchQuery, ignoreCase = true) ||
+                                it.id.contains(searchQuery, ignoreCase = true)
+                    }
+                }
+
                 LazyColumn(modifier = Modifier.weight(1f)) {
                     items(currentList, key = { it.id }) { item ->
-                        ListItem(
-                            headlineContent = { Text(item.name, maxLines = 1) },
-                            supportingContent = { Text(item.id.take(16) + "...", fontSize = 11.sp) },
-                            leadingContent = {
+                        val isPlayingThis = (uiState is MainUiState.Playing) && (contentIdInput == item.id)
+                        val cleanIdDisplay = cleanContentId(item.id)
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    contentIdInput = item.id
+                                    handlePlayContent(item.id, item.name)
+                                },
+                            color = if (isPlayingThis) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
                                 Text(
                                     text = if (item.isFavorite) "★" else "☆",
                                     modifier = Modifier.clickable {
+                                        val newFavState = !item.isFavorite
+
                                         jsonStreams = jsonStreams.map {
-                                            if (it.id == item.id) it.copy(isFavorite = !it.isFavorite) else it
+                                            if (it.id == item.id) it.copy(isFavorite = newFavState) else it
+                                        }.distinctBy { s -> s.id }
+
+                                        if (newFavState && jsonStreams.none { s -> s.id == item.id }) {
+                                            jsonStreams = jsonStreams + item.copy(isFavorite = true)
                                         }
-                                        StreamFavoritesManager.save(jsonStreams)
+                                        StreamFavoritesManager.saveFavorites(jsonStreams)
+
+                                        recentStreams = recentStreams.map {
+                                            if (it.id == item.id) {
+                                                val updated = it.copy(isFavorite = newFavState)
+                                                if (newFavState && jsonStreams.none { js -> js.id == it.id }) {
+                                                    jsonStreams = (listOf(updated) + jsonStreams).distinctBy { s -> s.id }
+                                                    StreamFavoritesManager.saveFavorites(jsonStreams)
+                                                }
+                                                updated
+                                            } else {
+                                                it
+                                            }
+                                        }
+                                        StreamFavoritesManager.saveRecents(recentStreams)
                                     },
-                                    fontSize = 20.sp,
+                                    fontSize = 18.sp,
                                     color = if (item.isFavorite) Color(0xFFFFD700) else Color.Gray
                                 )
-                            },
-                            trailingContent = {
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+
+                                Column(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(
+                                        text = item.name,
+                                        maxLines = 1,
+                                        fontSize = 14.sp,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = cleanIdDisplay,
+                                        maxLines = 1,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
                                         text = "✏️",
                                         modifier = Modifier
@@ -227,27 +345,27 @@ fun MainScreen(
                                                 editedNameInput = item.name
                                             }
                                             .padding(4.dp),
-                                        fontSize = 14.sp
+                                        fontSize = 13.sp
                                     )
                                     Text(
                                         text = "🗑️",
                                         modifier = Modifier
                                             .clickable {
-                                                jsonStreams = jsonStreams.filter { it.id != item.id }
-                                                StreamFavoritesManager.save(jsonStreams)
-                                                recentStreams = recentStreams.filter { it.id != item.id }
+                                                if (selectedTab == 0) {
+                                                    jsonStreams = jsonStreams.filter { it.id != item.id }
+                                                    StreamFavoritesManager.saveFavorites(jsonStreams)
+                                                } else {
+                                                    recentStreams = recentStreams.filter { it.id != item.id }
+                                                    StreamFavoritesManager.saveRecents(recentStreams)
+                                                }
                                             }
                                             .padding(4.dp),
-                                        fontSize = 14.sp
+                                        fontSize = 13.sp
                                     )
                                 }
-                            },
-                            modifier = Modifier.clickable {
-                                contentIdInput = item.id
-                                handlePlayContent(item.id, item.name)
                             }
-                        )
-                        HorizontalDivider()
+                        }
+                        HorizontalDivider(thickness = 0.5.dp)
                     }
                 }
 
@@ -263,14 +381,10 @@ fun MainScreen(
         }
 
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
+            modifier = Modifier.weight(1f).fillMaxHeight()
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 contentAlignment = Alignment.Center
             ) {
                 when (val state = uiState) {
@@ -310,9 +424,7 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .fillMaxWidth(),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -353,11 +465,13 @@ fun MainScreen(
                     jsonStreams = jsonStreams.map {
                         if (it.id == targetId) it.copy(name = editedNameInput) else it
                     }
-                    StreamFavoritesManager.save(jsonStreams)
+                    StreamFavoritesManager.saveFavorites(jsonStreams)
 
                     recentStreams = recentStreams.map {
                         if (it.id == targetId) it.copy(name = editedNameInput) else it
                     }
+                    StreamFavoritesManager.saveRecents(recentStreams)
+
                     channelToEdit = null
                 }) {
                     Text("Guardar")

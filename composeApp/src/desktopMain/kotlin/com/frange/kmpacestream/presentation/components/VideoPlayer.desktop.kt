@@ -3,6 +3,7 @@ package com.frange.kmpacestream.presentation.components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -12,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
@@ -37,6 +39,7 @@ actual fun VideoPlayer(
     var currentFrame by remember { mutableStateOf<ImageBitmap?>(null) }
     var bufferSeconds by remember { mutableIntStateOf(initialBufferSeconds) }
     var isPlaying by remember { mutableStateOf(false) }
+    var isMuted by remember { mutableStateOf(false) }
 
     val mediaPlayerFactory = remember {
         MediaPlayerFactory(
@@ -51,6 +54,7 @@ actual fun VideoPlayer(
         if (url.isNotEmpty()) {
             val options = arrayOf(":network-caching=${bufferSeconds * 1000}")
             mediaPlayer.media().play(url, *options)
+            mediaPlayer.audio().isMute = isMuted
             isPlaying = true
         }
     }
@@ -111,7 +115,17 @@ actual fun VideoPlayer(
         }
     }
 
-    Box(modifier = modifier.background(Color.Black)) {
+    Box(
+        modifier = modifier
+            .background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onDoubleTap = {
+                        onToggleFullScreen()
+                    }
+                )
+            }
+    ) {
         currentFrame?.let { bitmap ->
             Image(
                 bitmap = bitmap,
@@ -120,7 +134,7 @@ actual fun VideoPlayer(
             )
         }
 
-        // Botón FullScreen en la esquina superior derecha
+        // Botón FullScreen en la esquina superior derecha (mantenido)
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -143,18 +157,18 @@ actual fun VideoPlayer(
                 .padding(bottom = 24.dp)
                 .background(Color.Black.copy(alpha = 0.85f), RoundedCornerShape(12.dp))
                 .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón Play (Verde) / Stop (Rojo) inmediato
+            // Botón Play / Stop
             Text(
                 text = if (!isPlaying) "▶" else "⏹",
                 color = if (!isPlaying) Color.Green else Color.Red,
-                fontSize = 24.sp,
+                fontSize = 22.sp,
                 modifier = Modifier
                     .clickable {
                         if (isPlaying) {
-                            isPlaying = false // Forzar cambio de estado inmediato
+                            isPlaying = false
                             stopPlayback()
                         } else {
                             playWithCurrentBuffer()
@@ -163,15 +177,28 @@ actual fun VideoPlayer(
                     .padding(4.dp)
             )
 
-            // Selector de Buffer en segundos (Aplica y relanza al directo automáticamente)
+            // Botón Mute / Unmute
+            Text(
+                text = if (isMuted) "🔇" else "🔊",
+                color = if (isMuted) Color.Red else Color.White,
+                fontSize = 20.sp,
+                modifier = Modifier
+                    .clickable {
+                        isMuted = !isMuted
+                        mediaPlayer.audio().isMute = isMuted
+                    }
+                    .padding(4.dp)
+            )
+
+            // Selector de Buffer en segundos
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     text = "➖",
                     color = Color.Yellow,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     modifier = Modifier
                         .clickable {
                             if (bufferSeconds > 1) {
@@ -186,13 +213,13 @@ actual fun VideoPlayer(
                 Text(
                     text = "Buf: ${bufferSeconds}s",
                     color = Color.White,
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
 
                 Text(
                     text = "➕",
                     color = Color.Yellow,
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     modifier = Modifier
                         .clickable {
                             if (bufferSeconds < 30) {
