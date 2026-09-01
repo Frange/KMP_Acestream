@@ -17,7 +17,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import uk.co.caprica.vlcj.factory.MediaPlayerFactory
-import uk.co.caprica.vlcj.player.base.MediaPlayer
 import uk.co.caprica.vlcj.player.embedded.videosurface.CallbackVideoSurface
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormat
 import uk.co.caprica.vlcj.player.embedded.videosurface.callback.BufferFormatCallback
@@ -40,15 +39,16 @@ actual fun VideoPlayer(
     var bufferSeconds by remember { mutableIntStateOf(initialBufferSeconds) }
     var isPlaying by remember { mutableStateOf(false) }
     var isMuted by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val mediaPlayerFactory = remember {
         val os = System.getProperty("os.name").lowercase()
-        val extraArgs = if (os.contains("win")) {
+        val args = if (os.contains("win")) {
             arrayOf(
                 "--verbose=2",
                 "--no-video-title-show",
-                "--vout=direct3d11", // Forzamos DirectX 11 en Windows para que pinte el frame
-                "--avcodec-hw=any"   // Permite decodificación por hardware compatible
+                "--avcodec-hw=none", // Desactiva la aceleración por hardware que bloquea el callback de vídeo en Windows
+                "--no-osd"
             )
         } else {
             arrayOf(
@@ -56,25 +56,37 @@ actual fun VideoPlayer(
                 "--no-video-title-show"
             )
         }
-        MediaPlayerFactory(*extraArgs)
+        try {
+            MediaPlayerFactory(*args)
+        } catch (e: Exception) {
+            errorMessage = "Error init VLC: ${e.message}"
+            null
+        }
     }
-    
-    val mediaPlayer = remember {
-        mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer()
+
+    val mediaPlayer = remember(mediaPlayerFactory) {
+        mediaPlayerFactory?.mediaPlayers()?.newEmbeddedMediaPlayer()
     }
 
     fun playMedia() {
-        if (url.isNotEmpty()) {
-            val options = arrayOf(":network-caching=${bufferSeconds * 1000}")
-            mediaPlayer.media().play(url, *options)
-            mediaPlayer.audio().isMute = isMuted
-            isPlaying = true
+        if (url.isNotEmpty() && mediaPlayer != null) {
+            try {
+                errorMessage = null
+                val options = arrayOf(":network-caching=${bufferSeconds * 1000}")
+                mediaPlayer.media().play(url, *options)
+                mediaPlayer.audio().isMute = isMuted
+                isPlaying = true
+            } catch (e: Exception) {
+                errorMessage = "Error play: ${e.message}"
+            }
+        } else if (mediaPlayer == null) {
+            errorMessage = "Error: MediaPlayer es nulo (VLC no disponible)"
         }
     }
 
     fun stopMedia() {
         try {
-            if (mediaPlayer.status().isPlaying) {
+            if (mediaPlayer?.status()?.isPlaying == true) {
                 mediaPlayer.controls().stop()
             }
         } catch (_: Exception) {}
@@ -82,49 +94,55 @@ actual fun VideoPlayer(
         currentFrame = null
     }
 
-    // Volvemos a asociarlo a la URL para que el stream se inicialice
-    // y recupere el contexto gráfico al cambiar de tamaño o pantalla completa.
     DisposableEffect(url) {
-        val renderCallback = RenderCallback { _, nativeBuffers, bufferFormat ->
-            if (nativeBuffers.isNullOrEmpty() || bufferFormat == null) return@RenderCallback
-            val buffer = nativeBuffers[0]
-            val width = bufferFormat.width
-            val height = bufferFormat.height
+        if (mediaPlayer != null) {
+            val renderCallback = RenderCallback { _, nativeBuffers, bufferFormat ->
+                if (nativeBuffers.isNullOrEmpty() || bufferFormat == null) return@RenderCallback
+                val buffer = nativeBuffers[0]
+                val width = bufferFormat.width
+                val height = bufferFormat.height
 
-            if (width > 0 && height > 0) {
-                val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
-                val pixelData = (bufferedImage.raster.dataBuffer as DataBufferInt).data
+                if (width > 0 && height > 0) {
+                    try {
+                        val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+                        val pixelData = (bufferedImage.raster.dataBuffer as DataBufferInt).data
 
-                buffer.rewind()
-                buffer.asIntBuffer().get(pixelData)
+                        buffer.rewind()
+                        buffer.asIntBuffer().get(pixelData)
 
-                val bitmap = bufferedImage.toComposeImageBitmap()
+                        val bitmap = bufferedImage.toComposeImageBitmap()
 
-                SwingUtilities.invokeLater {
-                    currentFrame = bitmap
-                    isPlaying = true
+                        SwingUtilities.invokeLater {
+                            currentFrame = bitmap
+                            isPlaying = true
+                        }
+                    } catch (e: Exception) {
+                        SwingUtilities.invokeLater {
+                            errorMessage = "Render Error: ${e.message}"
+                        }
+                    }
                 }
             }
-        }
 
-        val bufferFormatCallback = object : BufferFormatCallback {
-            override fun getBufferFormat(sourceWidth: Int, sourceHeight: Int): BufferFormat {
-                return RV32BufferFormat(sourceWidth, sourceHeight)
+            val bufferFormatCallback = object : BufferFormatCallback {
+                override fun getBufferFormat(sourceWidth: Int, sourceHeight: Int): BufferFormat {
+                    return RV32BufferFormat(sourceWidth, sourceHeight)
+                }
+                override fun allocatedBuffers(buffers: Array<out ByteBuffer>?) {}
             }
-            override fun allocatedBuffers(buffers: Array<out ByteBuffer>?) {}
+
+            mediaPlayer.videoSurface().set(
+                CallbackVideoSurface(bufferFormatCallback, renderCallback, true, null)
+            )
+
+            playMedia()
         }
-
-        mediaPlayer.videoSurface().set(
-            CallbackVideoSurface(bufferFormatCallback, renderCallback, true, null)
-        )
-
-        playMedia()
 
         onDispose {
             stopMedia()
             try {
-                mediaPlayer.release()
-                mediaPlayerFactory.release()
+                mediaPlayer?.release()
+                mediaPlayerFactory?.release()
             } catch (_: Exception) {}
         }
     }
@@ -145,7 +163,26 @@ actual fun VideoPlayer(
                 modifier = Modifier.fillMaxSize()
             )
         } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(text = "Cargando vídeo...", color = Color.Gray, fontSize = 16.sp)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "Cargando vídeo...", color = Color.Gray, fontSize = 16.sp)
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(text = errorMessage!!, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                }
+            }
+        }
+
+        // Si hay error en cualquier momento, mostrarlo sutilmente abajo
+        errorMessage?.let { err ->
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(8.dp)
+                    .background(Color.Red.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
+                    .padding(8.dp)
+            ) {
+                Text(text = err, color = Color.White, fontSize = 12.sp)
+            }
         }
 
         // Botón FullScreen Superior Derecho
@@ -170,7 +207,6 @@ actual fun VideoPlayer(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Play / Stop
             Text(
                 text = if (!isPlaying) "▶" else "⏹",
                 color = if (!isPlaying) Color.Green else Color.Red,
@@ -180,18 +216,16 @@ actual fun VideoPlayer(
                 }.padding(4.dp)
             )
 
-            // Mute / Unmute
             Text(
                 text = if (isMuted) "🔇" else "🔊",
                 color = if (isMuted) Color.Red else Color.White,
                 fontSize = 20.sp,
                 modifier = Modifier.clickable {
                     isMuted = !isMuted
-                    mediaPlayer.audio().isMute = isMuted
+                    mediaPlayer?.audio()?.isMute = isMuted
                 }.padding(4.dp)
             )
 
-            // Buffer Controls
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
