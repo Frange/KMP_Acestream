@@ -115,6 +115,7 @@ fun startAceStreamEngine() {
     }
 }
 fun main(args: Array<String>) {
+    System.setProperty("compose.swing.render.on.top", "false")
     System.setProperty("compose.interop.blending", "true")
     System.setProperty("apple.awt.graphics.EnableQ2DX", "true")
 
@@ -163,7 +164,8 @@ fun main(args: Array<String>) {
         Window(
             onCloseRequest = ::exitApplication,
             title = "KMP Acestream",
-            state = windowState
+            state = windowState,
+            undecorated = true,
         ) {
             window.minimumSize = Dimension(950, 600)
             MainScreen(windowState = windowState)

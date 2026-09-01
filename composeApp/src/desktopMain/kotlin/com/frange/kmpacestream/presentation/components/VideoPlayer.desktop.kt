@@ -42,12 +42,23 @@ actual fun VideoPlayer(
     var isMuted by remember { mutableStateOf(false) }
 
     val mediaPlayerFactory = remember {
-        MediaPlayerFactory(
-            "--verbose=2",                 // Nivel de detalle máximo para VLC
-            "--no-video-title-show",
-//            "--quiet"
-        )
+        val os = System.getProperty("os.name").lowercase()
+        val extraArgs = if (os.contains("win")) {
+            arrayOf(
+                "--verbose=2",
+                "--no-video-title-show",
+                "--vout=direct3d11", // Forzamos DirectX 11 en Windows para que pinte el frame
+                "--avcodec-hw=any"   // Permite decodificación por hardware compatible
+            )
+        } else {
+            arrayOf(
+                "--verbose=2",
+                "--no-video-title-show"
+            )
+        }
+        MediaPlayerFactory(*extraArgs)
     }
+    
     val mediaPlayer = remember {
         mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer()
     }
