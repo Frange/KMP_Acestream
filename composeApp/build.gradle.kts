@@ -106,6 +106,7 @@ composeExtension.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Pkg,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
             )
+            
             packageName = "KMP Acestream"
             packageVersion = "1.0.0"
 
