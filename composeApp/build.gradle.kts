@@ -95,7 +95,7 @@ android {
     }
 }
 
-// Configuración para empaquetado Desktop (utiliza la extensión delegada del plugin)
+// Configuración para empaquetado Desktop con soporte para esquemas URI (acestream://)
 val composeExtension = extensions.getByType<org.jetbrains.compose.ComposeExtension>()
 composeExtension.desktop {
     application {
@@ -109,7 +109,29 @@ composeExtension.desktop {
             packageName = "KMP Acestream"
             packageVersion = "1.0.0"
 
+            outputBaseDir.set(project.layout.buildDirectory.dir("../dist"))
+
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/desktopMain/resources"))
+
+            // Configuración del protocolo URL Scheme para macOS
+            macOS {
+                bundleID = "com.frange.kmpacestream.app"
+                infoPlist {
+                    extraKeysRawXml = """
+                        <key>CFBundleURLTypes</key>
+                        <array>
+                            <dict>
+                                <key>CFBundleURLName</key>
+                                <string>AceStream Protocol</string>
+                                <key>CFBundleURLSchemes</key>
+                                <array>
+                                    <string>acestream</string>
+                                </array>
+                            </dict>
+                        </array>
+                    """.trimIndent()
+                }
+            }
         }
     }
 }
