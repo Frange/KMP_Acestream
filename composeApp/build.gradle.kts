@@ -109,7 +109,7 @@ composeExtension.desktop {
             packageName = "KMP Acestream"
             packageVersion = "1.0.0"
 
-            outputBaseDir.set(project.layout.buildDirectory.dir("../dist"))
+            outputBaseDir.set(project.layout.buildDirectory.dir("../../dist"))
 
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/desktopMain/resources"))
 
