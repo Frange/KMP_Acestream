@@ -2,6 +2,7 @@ package com.frange.kmpacestream
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import com.frange.kmpacestream.di.appModule
@@ -33,7 +34,6 @@ fun registerWindowsProtocol() {
         val command = if (currentJarOrExe.endsWith(".exe")) {
             "\"$currentJarOrExe\" \"%1\""
         } else {
-            // Si se ejecuta como script/jar, aseguramos que reciba el parámetro %1
             "javaw -jar \"$currentJarOrExe\" \"%1\""
         }
 
@@ -114,6 +114,7 @@ fun startAceStreamEngine() {
         }
     }
 }
+
 fun main(args: Array<String>) {
     System.setProperty("compose.swing.render.on.top", "false")
     System.setProperty("compose.interop.blending", "true")
@@ -125,13 +126,11 @@ fun main(args: Array<String>) {
     registerWindowsProtocol()
     startAceStreamEngine()
 
-    // Variable para almacenar el enlace detectado
     var pendingUri: String? = args.firstOrNull { it.startsWith("acestream://", ignoreCase = true) }
     if (pendingUri != null) {
         println("LOG-URI: ¡Enlace capturado por argumentos de inicio! -> $pendingUri")
     }
 
-    // Registrar manejador de AWT para app abierta en caliente (ej: macOS o segunda llamada en Windows)
     try {
         if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_OPEN_URI)) {
             Desktop.getDesktop().setOpenURIHandler { event ->
@@ -165,7 +164,7 @@ fun main(args: Array<String>) {
             onCloseRequest = ::exitApplication,
             title = "KMP Acestream",
             state = windowState,
-            undecorated = true,
+            undecorated = false
         ) {
             window.minimumSize = Dimension(950, 600)
             MainScreen(windowState = windowState)
