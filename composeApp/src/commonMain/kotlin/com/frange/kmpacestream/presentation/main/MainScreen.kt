@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.WindowPlacement
+import androidx.compose.ui.window.rememberWindowState
 import com.frange.kmpacestream.presentation.components.VideoPlayer
 import com.frange.kmpacestream.shared.domain.core.toUiText
 import com.frange.kmpacestream.shared.domain.model.AceStreamStats
@@ -110,15 +112,18 @@ private fun getInitialStreamList(): List<StreamItem> {
 
 @Composable
 fun MainScreen(
-    viewModel: MainViewModel = koinViewModel()
+    viewModel: MainViewModel = koinViewModel(),
+    windowState: androidx.compose.ui.window.WindowState = rememberWindowState()
 ) {
     MaterialTheme(colorScheme = AndroidStudioDarkColorScheme) {
         val uiState by viewModel.uiState.collectAsState()
         var contentIdInput by remember { mutableStateOf("") }
         var selectedTab by remember { mutableIntStateOf(0) }
         var showStatsOverlay by remember { mutableStateOf(true) }
-        var isFullscreen by remember { mutableStateOf(false) }
         var searchQuery by remember { mutableStateOf("") }
+
+        // Sincronizamos directamente con el estado de la ventana de Compose
+        val isFullscreen = windowState.placement == WindowPlacement.Fullscreen
 
         var savedBufferSeconds by remember { mutableIntStateOf(3) }
 
@@ -139,15 +144,10 @@ fun MainScreen(
         }
 
         fun toggleWindowFullScreen() {
-            isFullscreen = !isFullscreen
-            val window = Frame.getFrames().firstOrNull { it.isVisible }
-            if (window != null) {
-                val device = window.graphicsConfiguration.device
-                if (device.fullScreenWindow == window) {
-                    device.fullScreenWindow = null
-                } else {
-                    device.fullScreenWindow = window
-                }
+            windowState.placement = if (windowState.placement == WindowPlacement.Fullscreen) {
+                WindowPlacement.Floating
+            } else {
+                WindowPlacement.Fullscreen
             }
         }
 

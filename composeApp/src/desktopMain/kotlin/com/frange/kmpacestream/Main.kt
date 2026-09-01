@@ -114,7 +114,6 @@ fun startAceStreamEngine() {
         }
     }
 }
-
 fun main(args: Array<String>) {
     System.setProperty("compose.interop.blending", "true")
     System.setProperty("apple.awt.graphics.EnableQ2DX", "true")
@@ -156,16 +155,18 @@ fun main(args: Array<String>) {
             }
         }
 
+        val windowState = rememberWindowState(
+            width = 1100.dp,
+            height = 700.dp
+        )
+
         Window(
             onCloseRequest = ::exitApplication,
             title = "KMP Acestream",
-            state = rememberWindowState(
-                width = 1100.dp,
-                height = 700.dp
-            )
+            state = windowState
         ) {
             window.minimumSize = Dimension(950, 600)
-            MainScreen()
+            MainScreen(windowState = windowState)
         }
     }
 }

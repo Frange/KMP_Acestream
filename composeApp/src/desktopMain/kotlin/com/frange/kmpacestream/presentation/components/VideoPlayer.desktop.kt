@@ -43,14 +43,16 @@ actual fun VideoPlayer(
 
     val mediaPlayerFactory = remember {
         MediaPlayerFactory(
+            "--verbose=2",                 // Nivel de detalle máximo para VLC
             "--no-video-title-show",
-            "--quiet"
+//            "--quiet"
         )
     }
+    val mediaPlayer = remember {
+        mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer()
+    }
 
-    val mediaPlayer = remember { mediaPlayerFactory.mediaPlayers().newEmbeddedMediaPlayer() }
-
-    fun playWithCurrentBuffer() {
+    fun playMedia() {
         if (url.isNotEmpty()) {
             val options = arrayOf(":network-caching=${bufferSeconds * 1000}")
             mediaPlayer.media().play(url, *options)
@@ -59,27 +61,26 @@ actual fun VideoPlayer(
         }
     }
 
-    fun stopPlayback() {
-        mediaPlayer.controls().stop()
+    fun stopMedia() {
+        try {
+            if (mediaPlayer.status().isPlaying) {
+                mediaPlayer.controls().stop()
+            }
+        } catch (_: Exception) {}
         isPlaying = false
         currentFrame = null
     }
 
+    // Volvemos a asociarlo a la URL para que el stream se inicialice
+    // y recupere el contexto gráfico al cambiar de tamaño o pantalla completa.
     DisposableEffect(url) {
-        val renderCallback = object : RenderCallback {
-            override fun display(
-                mediaPlayer: MediaPlayer?,
-                nativeBuffers: Array<out ByteBuffer>?,
-                bufferFormat: BufferFormat?
-            ) {
-                if (nativeBuffers == null || bufferFormat == null || nativeBuffers.isEmpty()) return
-                val buffer = nativeBuffers[0]
+        val renderCallback = RenderCallback { _, nativeBuffers, bufferFormat ->
+            if (nativeBuffers.isNullOrEmpty() || bufferFormat == null) return@RenderCallback
+            val buffer = nativeBuffers[0]
+            val width = bufferFormat.width
+            val height = bufferFormat.height
 
-                val width = bufferFormat.getWidth()
-                val height = bufferFormat.getHeight()
-
-                if (width <= 0 || height <= 0) return
-
+            if (width > 0 && height > 0) {
                 val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
                 val pixelData = (bufferedImage.raster.dataBuffer as DataBufferInt).data
 
@@ -99,19 +100,21 @@ actual fun VideoPlayer(
             override fun getBufferFormat(sourceWidth: Int, sourceHeight: Int): BufferFormat {
                 return RV32BufferFormat(sourceWidth, sourceHeight)
             }
-
             override fun allocatedBuffers(buffers: Array<out ByteBuffer>?) {}
         }
 
-        val videoSurface = CallbackVideoSurface(bufferFormatCallback, renderCallback, true, null)
-        mediaPlayer.videoSurface().set(videoSurface)
+        mediaPlayer.videoSurface().set(
+            CallbackVideoSurface(bufferFormatCallback, renderCallback, true, null)
+        )
 
-        playWithCurrentBuffer()
+        playMedia()
 
         onDispose {
-            stopPlayback()
-            mediaPlayer.release()
-            mediaPlayerFactory.release()
+            stopMedia()
+            try {
+                mediaPlayer.release()
+                mediaPlayerFactory.release()
+            } catch (_: Exception) {}
         }
     }
 
@@ -120,9 +123,7 @@ actual fun VideoPlayer(
             .background(Color.Black)
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onDoubleTap = {
-                        onToggleFullScreen()
-                    }
+                    onDoubleTap = { onToggleFullScreen() }
                 )
             }
     ) {
@@ -132,9 +133,11 @@ actual fun VideoPlayer(
                 contentDescription = "AceStream Video",
                 modifier = Modifier.fillMaxSize()
             )
+        } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(text = "Cargando vídeo...", color = Color.Gray, fontSize = 16.sp)
         }
 
-        // Botón FullScreen en la esquina superior derecha (mantenido)
+        // Botón FullScreen Superior Derecho
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -143,14 +146,10 @@ actual fun VideoPlayer(
                 .clickable { onToggleFullScreen() }
                 .padding(horizontal = 10.dp, vertical = 6.dp)
         ) {
-            Text(
-                text = "⛶",
-                color = Color.White,
-                fontSize = 22.sp
-            )
+            Text(text = "⛶", color = Color.White, fontSize = 22.sp)
         }
 
-        // Barra de Controles Simplificada y Centrada Abajo
+        // Barra de Control Inferior
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -160,37 +159,28 @@ actual fun VideoPlayer(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón Play / Stop
+            // Play / Stop
             Text(
                 text = if (!isPlaying) "▶" else "⏹",
                 color = if (!isPlaying) Color.Green else Color.Red,
                 fontSize = 22.sp,
-                modifier = Modifier
-                    .clickable {
-                        if (isPlaying) {
-                            isPlaying = false
-                            stopPlayback()
-                        } else {
-                            playWithCurrentBuffer()
-                        }
-                    }
-                    .padding(4.dp)
+                modifier = Modifier.clickable {
+                    if (isPlaying) stopMedia() else playMedia()
+                }.padding(4.dp)
             )
 
-            // Botón Mute / Unmute
+            // Mute / Unmute
             Text(
                 text = if (isMuted) "🔇" else "🔊",
                 color = if (isMuted) Color.Red else Color.White,
                 fontSize = 20.sp,
-                modifier = Modifier
-                    .clickable {
-                        isMuted = !isMuted
-                        mediaPlayer.audio().isMute = isMuted
-                    }
-                    .padding(4.dp)
+                modifier = Modifier.clickable {
+                    isMuted = !isMuted
+                    mediaPlayer.audio().isMute = isMuted
+                }.padding(4.dp)
             )
 
-            // Selector de Buffer en segundos
+            // Buffer Controls
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -199,36 +189,28 @@ actual fun VideoPlayer(
                     text = "➖",
                     color = Color.Yellow,
                     fontSize = 16.sp,
-                    modifier = Modifier
-                        .clickable {
-                            if (bufferSeconds > 1) {
-                                bufferSeconds--
-                                onBufferChanged(bufferSeconds)
-                                playWithCurrentBuffer()
-                            }
+                    modifier = Modifier.clickable {
+                        if (bufferSeconds > 1) {
+                            bufferSeconds--
+                            onBufferChanged(bufferSeconds)
+                            playMedia()
                         }
-                        .padding(4.dp)
+                    }.padding(4.dp)
                 )
 
-                Text(
-                    text = "Buf: ${bufferSeconds}s",
-                    color = Color.White,
-                    fontSize = 15.sp
-                )
+                Text(text = "Buf: ${bufferSeconds}s", color = Color.White, fontSize = 15.sp)
 
                 Text(
                     text = "➕",
                     color = Color.Yellow,
                     fontSize = 16.sp,
-                    modifier = Modifier
-                        .clickable {
-                            if (bufferSeconds < 30) {
-                                bufferSeconds++
-                                onBufferChanged(bufferSeconds)
-                                playWithCurrentBuffer()
-                            }
+                    modifier = Modifier.clickable {
+                        if (bufferSeconds < 30) {
+                            bufferSeconds++
+                            onBufferChanged(bufferSeconds)
+                            playMedia()
                         }
-                        .padding(4.dp)
+                    }.padding(4.dp)
                 )
             }
         }
