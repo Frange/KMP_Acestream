@@ -39,8 +39,8 @@ jobs:
         with:
           name: installers-${{ matrix.os }}
           path: |
-            **/build/compose/binaries/main/dmg/*.dmg
-            **/build/compose/binaries/main/msi/*.msi
-            **/build/compose/binaries/main/exe/*.exe
-            **/build/compose/binaries/main/deb/*.deb
+            **/build/compose/binaries/**/*.dmg
+            **/build/compose/binaries/**/*.msi
+            **/build/compose/binaries/**/*.exe
+            **/build/compose/binaries/**/*.deb
             
