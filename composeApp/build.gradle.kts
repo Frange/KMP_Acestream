@@ -111,7 +111,6 @@ composeExtension.desktop {
             packageVersion = "1.0.0"
 
             outputBaseDir.set(project.layout.buildDirectory.dir("../../dist"))
-
             appResourcesRootDir.set(project.layout.projectDirectory.dir("src/desktopMain/resources"))
 
             // Configuración del protocolo URL Scheme para macOS
