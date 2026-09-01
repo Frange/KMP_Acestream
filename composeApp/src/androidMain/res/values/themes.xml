@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Tema Principal de la App -->
+    <style name="Theme.KMPAcestream" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="colorPrimary">#2BA9BC</item>
+        <item name="android:statusBarColor">#2BA9BC</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Tema PoiApp heredado del proyecto anterior -->
+    <style name="Theme.PoiApp" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+    </style>
+
+    <style name="Theme.PoiApp.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.PoiApp.AppBarOverlay" parent="Theme.AppCompat.DayNight.NoActionBar" />
+
+    <style name="Theme.PoiApp.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="Theme.PoiApp.AppWidgetContainerParent" parent="@android:style/Theme.DeviceDefault" />
+
+    <style name="Theme.PoiApp.AppWidgetContainer" parent="Theme.PoiApp.AppWidgetContainerParent" />
+
+</resources>

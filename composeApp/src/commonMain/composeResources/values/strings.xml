@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <string name="app_loading_text">Loading... \nPlease wait a moment</string>
+
+    <!-- API -->
+    <string name="api_retry_button">Retry</string>
+    <string name="api_error_unknown">Unknown error</string>
+    <string name="api_error_occurred">"An error occurred. \nPlease try again.\nError code: </string>
+
+    <!-- Portfolio -->
+    <string name="portfolio_profit_title">Profit</string>
+    <string name="portfolio_profit_contracted_title">P</string>
+    <string name="portfolio_balance_title">Total balance</string>
+    <string name="portfolio_liquidity_title">Liquidity</string>
+    <string name="portfolio_return_title">Return</string>
+    <string name="portfolio_return_contracted_title">R</string>
+    <string name="portfolio_daily_title">Daily</string>
+    <string name="portfolio_open_title">Open</string>
+    <string name="portfolio_trade_open">TRADE OPEN</string>
+    <string name="portfolio_trade_closed">TRADE CLOSED</string>
+
+    <!-- Transaction -->
+    <string name="transaction_summary_total_profit_title">Total profit</string>
+    <string name="transaction_summary_total_profit_percentage_title">Total percentage</string>
+
+
+    <!-- Status -->
+    <string name="status_open">OPEN</string>
+    <string name="status_closed">CLOSED</string>
+    <string name="status_dividend">DIVIDEND</string>
+
+    <!-- Portfolio - Purchase -->
+    <string name="purchase_title">Purchase</string>
+    <string name="purchase_date">Date:</string>
+    <string name="purchase_price">Price:</string>
+    <string name="purchase_shares">Shares:</string>
+
+    <!-- Portfolio - Sale -->
+    <string name="sale_title">Sale</string>
+    <string name="sale_date">Date:</string>
+    <string name="sale_price">Price:</string>
+    <string name="sale_shares">Shares:</string>
+
+    <!-- Portfolio - Profit -->
+    <string name="profit_title">Profit</string>
+    <string name="profit_total">Total profit:</string>
+    <string name="profit_days">Active days:</string>
+    <string name="profit_daily">Daily profit:</string>
+
+    <!-- Portfolio Toolbar -->
+    <string name="toolbar_search_placeholder">Search</string>
+    <string name="toolbar_search_content_desc">Search</string>
+    <string name="toolbar_toggle_privacy_desc">Toggle Privacy</string>
+    <string name="toolbar_filter_content_desc">Filter</string>
+
+    <!-- Portfolio - Detail -->
+    <string name="portfolio_trade_detail_buy_date"> (Purchase)</string>
+    <string name="portfolio_trade_detail_sale_date"> (Sale)</string>
+    <string name="portfolio_trade_detail_sale_holding">Holding</string>
+    <string name="portfolio_trade_detail_price">Price: </string>
+    <string name="portfolio_trade_detail_price_empty">Price: -</string>
+    <string name="portfolio_trade_detail_investment">Investment: </string>
+    <string name="portfolio_trade_detail_proceeds">Proceeds: </string>
+    <string name="portfolio_trade_detail_shares">Shares: </string>
+
+    <!-- Portfolio - Profit -->
+    <string name="portfolio_trade_profit_total_profit">Total profit: </string>
+    <string name="portfolio_trade_profit_total_loss">Total loss: </string>
+    <string name="portfolio_trade_profit_daily">Daily: </string>
+    <string name="portfolio_trade_profit_closed_after">Closed after </string>
+    <string name="portfolio_trade_profit_active_for">Active for </string>
+    <string name="portfolio_trade_profit_market_day">market day</string>
+    <string name="portfolio_trade_profit_market_days">market days</string>
+
+    <!-- Portfolio - Dividend -->
+    <string name="portfolio_dividend_profit">Profit: </string>
+    <string name="portfolio_dividend_title">DIVIDEND</string>
+
+    <!-- Filter -->
+    <string name="filter_title">Filters</string>
+    <string name="filter_reset_title">Reset</string>
+    <string name="filter_show_transactions_title">Show transactions: </string>
+    <string name="filter_status_all">All</string>
+    <string name="filter_status_open">Open</string>
+    <string name="filter_status_closed">Closed</string>
+    <string name="filter_sort_direction_title">Sort direction: </string>
+    <string name="filter_sort_direction_ascending">Ascending</string>
+    <string name="filter_sort_direction_descending">Descending</string>
+    <string name="filter_market_title">Filter by markets: </string>
+    <string name="filter_order_by_title">Order by: </string>
+    <string name="filter_apply_filters_button">Apply filters</string>
+
+    <!-- Filter - Sort options -->
+    <string name="filter_sort_option_alphabetical">Alphabetical</string>
+    <string name="filter_sort_option_buy_order">Buy order</string>
+    <string name="filter_sort_option_sell_order">Sell order</string>
+    <string name="filter_sort_option_daily_profit">Daily profit</string>
+    <string name="filter_sort_option_total_profit">Total profit</string>
+    <string name="filter_sort_option_market">Market</string>
+    <string name="filter_sort_option_status">Status \n(open/closed)</string>
+
+    <!-- Equity -->
+    <string name="equity_range_1d">1d</string>
+    <string name="equity_range_5d">5d</string>
+    <string name="equity_range_1m">1M</string>
+    <string name="equity_range_6m">6M</string>
+    <string name="equity_range_1y">1Y</string>
+    <string name="equity_range_5y">5Y</string>
+    <string name="equity_range_all">ALL</string>
+    <string name="equity_last_update_text">Last update: </string>
+    <string name="equity_purchase_price_text">Purchase price: </string>
+    <string name="equity_current_price_text">Current price: </string>
+    <string name="equity_previous_close_price_text">Previous close: </string>
+    <string name="equity_previous_market_text">Market: </string>
+
+    <!-- Config screen -->
+    <string name="config_not_available_user_name">Not available</string>
+    <string name="config_not_available_balance">Not available</string>
+    <string name="config_account_title">Account</string>
+    <string name="config_currency_selection_title">Currency selection</string>
+    <string name="config_transfers_title">Transfers</string>
+    <string name="config_title">Configuration</string>
+    <string name="config_language_selection_title">Language selection</string>
+    <string name="config_dark_mode">Dark mode</string>
+    <string name="config_logout_button">Logout</string>
+
+    <!-- Calculator screen -->
+    <string name="calculator_currency_converter_title">Currency converter</string>
+    <string name="calculator_amount_in">Amount in </string>
+    <string name="calculator_stop_limit_calculator">Stop Limit Calculator</string>
+    <string name="calculator_stop_limit_price_per_share">Price per share</string>
+    <string name="calculator_stop_limit_number_of_shares">Number of shares</string>
+
+    <string name="calculator_stop_limit_stop_loss">Stop Loss (-10%)</string>
+    <string name="calculator_stop_limit_take_profit">Take Profit (+15%)</string>
+    <string name="calculator_stop_limit_total">Total</string>
+    <string name="calculator_stop_limit_total_gbp">Total in GBP</string>
+    <string name="calculator_stop_limit_total_eur">Total in EUR</string>
+    <string name="calculator_stop_limit_currency">Currency</string>
+
+    <!-- Currency selection screen -->
+    <string name="currency_selection_title">Currency selection</string>
+
+    <!-- Language selection screen -->
+    <string name="language_selection_title">Language selection</string>
+    <string name="language_selection_spanish">Español</string>
+    <string name="language_selection_english">English</string>
+    <string name="language_selection_french">Français</string>
+    <string name="language_selection_italian">Italiano</string>
+    <string name="language_selection_german">Deutsch</string>
+    <string name="language_selection_portuguese">Português</string>
+
+    <!-- Main language dialog -->
+    <string name="main_language_dialog_title">Language changed</string>
+    <string name="main_language_dialog_message">Press to continue</string>
+    <string name="main_language_accept">Accept</string>
+
+    <!-- Transfer screen -->
+    <string name="transfer_transfers_title">Transfers</string>
+
+    <!-- Screens -->
+    <string name="screen_portfolio">Portfolio</string>
+    <string name="screen_transactions">Transactions</string>
+    <string name="screen_config">Config</string>
+    <string name="screen_equity">Equity</string>
+    <string name="screen_filter">Filter</string>
+    <string name="screen_currency_selection">Currency selection</string>
+    <string name="screen_transfers">Transfers</string>
+    <string name="screen_language_selection">Language selection</string>
+    <string name="screen_calculator">Calculator</string>
+
+</resources>
