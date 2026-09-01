@@ -39,5 +39,7 @@ jobs:
         with:
           name: installers-${{ matrix.os }}
           path: |
+            build/compose/binaries/
+          path: |
             dist/**/*
             
