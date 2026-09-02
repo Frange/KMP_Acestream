@@ -40,9 +40,25 @@ fun registerWindowsProtocol() {
         println("LOG-REG: Comando de registro asociado: $command")
 
         val commands = listOf(
-            listOf("reg", "add", "HKCU\\Software\\Classes\\acestream", "/ve", "/d", "URL:AceStream Protocol", "/f"),
+            listOf(
+                "reg",
+                "add",
+                "HKCU\\Software\\Classes\\acestream",
+                "/ve",
+                "/d",
+                "URL:AceStream Protocol",
+                "/f"
+            ),
             listOf("reg", "add", "HKCU\\Software\\Classes\\acestream", "/v", "URL Protocol", "/f"),
-            listOf("reg", "add", "HKCU\\Software\\Classes\\acestream\\shell\\open\\command", "/ve", "/d", command, "/f")
+            listOf(
+                "reg",
+                "add",
+                "HKCU\\Software\\Classes\\acestream\\shell\\open\\command",
+                "/ve",
+                "/d",
+                command,
+                "/f"
+            )
         )
 
         for (cmd in commands) {
@@ -66,9 +82,14 @@ fun startAceStreamEngine() {
                 val winExecutable = File(engineDir, "ace_engine.exe")
 
                 if (!winExecutable.exists()) {
-                    object {}::class.java.getResourceAsStream("/engine_win/ace_engine.exe")?.use { input ->
-                        Files.copy(input, winExecutable.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                    }
+                    object {}::class.java.getResourceAsStream("/engine_win/ace_engine.exe")
+                        ?.use { input ->
+                            Files.copy(
+                                input,
+                                winExecutable.toPath(),
+                                StandardCopyOption.REPLACE_EXISTING
+                            )
+                        }
                 }
 
                 if (winExecutable.exists()) {
@@ -132,7 +153,9 @@ fun main(args: Array<String>) {
     }
 
     try {
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.APP_OPEN_URI)) {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop()
+                .isSupported(Desktop.Action.APP_OPEN_URI)
+        ) {
             Desktop.getDesktop().setOpenURIHandler { event ->
                 val uriString = event.uri?.toString()
                 if (!uriString.isNullOrBlank()) {
@@ -155,19 +178,29 @@ fun main(args: Array<String>) {
             }
         }
 
-        val windowState = rememberWindowState(
-            width = 1100.dp,
-            height = 700.dp
-        )
 
         Window(
             onCloseRequest = ::exitApplication,
-            title = "KMP Acestream",
-            state = windowState,
-            undecorated = false
+            state = rememberWindowState()
         ) {
-            window.minimumSize = Dimension(950, 600)
-            MainScreen(windowState = windowState)
+            val windowState = rememberWindowState(
+                width = 1100.dp,
+                height = 700.dp
+            )
+
+            val isFullscreen = windowState.placement == WindowPlacement.Fullscreen
+
+            MainScreen(
+                isFullscreen = isFullscreen,
+                onToggleFullscreen = {
+                    windowState.placement =
+                        if (windowState.placement == WindowPlacement.Fullscreen) {
+                            WindowPlacement.Floating
+                        } else {
+                            WindowPlacement.Fullscreen
+                        }
+                }
+            )
         }
     }
 }
