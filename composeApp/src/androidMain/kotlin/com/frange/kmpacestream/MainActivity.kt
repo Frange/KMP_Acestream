@@ -26,16 +26,6 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            /*val state by viewModel.uiState.collectAsState()
-
-            LaunchedEffect(state.parkDetail, state.favoriteRideIds) {
-                val rides = state.parkDetail?.rides.orEmpty()
-                if (rides.isNotEmpty()) {
-                    WidgetSaveModel.saveData(this@MainActivity, rides)
-                    CoasterListWidget().updateAll(this@MainActivity)
-                }
-            }*/
-
             App()
         }
     }

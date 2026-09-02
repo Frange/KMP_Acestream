@@ -50,6 +50,10 @@ kotlin {
 
             implementation(libs.androidx.glance.appwidget)
             implementation(libs.androidx.glance.material3)
+
+            implementation("androidx.media3:media3-exoplayer:1.4.1")
+            implementation("androidx.media3:media3-ui:1.4.1")
+            implementation("androidx.media3:media3-common:1.4.1")
         }
 
         val desktopMain by getting {

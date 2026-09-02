@@ -18,8 +18,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.rememberWindowState
 import com.frange.kmpacestream.presentation.components.VideoPlayer
 import com.frange.kmpacestream.shared.domain.core.toUiText
 import com.frange.kmpacestream.shared.domain.model.AceStreamStats
@@ -31,7 +29,6 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
-import java.awt.Frame
 import java.io.File
 import java.net.URL
 import kotlin.time.Duration.Companion.milliseconds
@@ -42,10 +39,10 @@ private val AndroidStudioDarkColorScheme = darkColorScheme(
     primaryContainer = Color(0xFF1E3A8A),
     onPrimaryContainer = Color(0xFF93C5FD),
     surface = Color(0xFF25272B),
-    onSurface = Color(0xFFFFFFFF),        // Texto blanco brillante para máxima visibilidad
-    surfaceVariant = Color(0xFF1E1F22),   // Fondo general de la lista
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFF1E1F22),
     onSurfaceVariant = Color(0xFFA9ACB6),
-    outline = Color(0xFFFFFFFF),          // Borde blanco destacado
+    outline = Color(0xFFFFFFFF),
     background = Color(0xFF141414),
     onBackground = Color(0xFFFFFFFF),
     error = Color(0xFFCF6679)
@@ -54,7 +51,7 @@ private val AndroidStudioDarkColorScheme = darkColorScheme(
 object StreamFavoritesManager {
     private val appDir: File
         get() {
-            val userDir = System.getProperty("user.home")
+            val userDir = System.getProperty("user.home") ?: "."
             return File(userDir, ".kmpacestream").apply { mkdirs() }
         }
 
@@ -113,7 +110,8 @@ private fun getInitialStreamList(): List<StreamItem> {
 @Composable
 fun MainScreen(
     viewModel: MainViewModel = koinViewModel(),
-    windowState: androidx.compose.ui.window.WindowState = rememberWindowState()
+    isFullscreen: Boolean = false,
+    onToggleFullscreen: () -> Unit = {}
 ) {
     MaterialTheme(colorScheme = AndroidStudioDarkColorScheme) {
         val uiState by viewModel.uiState.collectAsState()
@@ -121,9 +119,6 @@ fun MainScreen(
         var selectedTab by remember { mutableIntStateOf(0) }
         var showStatsOverlay by remember { mutableStateOf(true) }
         var searchQuery by remember { mutableStateOf("") }
-
-        // Sincronizamos directamente con el estado de la ventana de Compose
-        val isFullscreen = windowState.placement == WindowPlacement.Fullscreen
 
         var savedBufferSeconds by remember { mutableIntStateOf(3) }
 
@@ -140,14 +135,6 @@ fun MainScreen(
                 trimmed.removePrefix("acestream://").removePrefix("ACESTREAM://")
             } else {
                 trimmed
-            }
-        }
-
-        fun toggleWindowFullScreen() {
-            windowState.placement = if (windowState.placement == WindowPlacement.Fullscreen) {
-                WindowPlacement.Floating
-            } else {
-                WindowPlacement.Fullscreen
             }
         }
 
@@ -232,7 +219,6 @@ fun MainScreen(
                     Column(
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        // Bloque superior destacado a ancho completo hasta los tabs
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             color = MaterialTheme.colorScheme.surface,
@@ -484,7 +470,7 @@ fun MainScreen(
                                 url = state.streamUrl,
                                 initialBufferSeconds = savedBufferSeconds,
                                 onBufferChanged = { savedBufferSeconds = it },
-                                onToggleFullScreen = { toggleWindowFullScreen() },
+                                onToggleFullScreen = onToggleFullscreen,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
