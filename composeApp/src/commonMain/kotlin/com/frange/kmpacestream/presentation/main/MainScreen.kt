@@ -20,13 +20,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.frange.kmpacestream.presentation.components.VideoPlayer
 import com.frange.kmpacestream.shared.domain.core.toUiText
-import com.frange.kmpacestream.shared.domain.model.AceStreamStats
-import com.frange.kmpacestream.shared.domain.model.StreamItem
+import com.frange.kmpacestream.shared.domain.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
@@ -318,7 +316,10 @@ fun MainScreen(
                             }
 
                             LazyColumn(modifier = Modifier.weight(1f)) {
-                                items(currentList, key = { it.id }) { item ->
+                                items(
+                                    items = currentList,
+                                    key = { it.id }
+                                ) { item ->
                                     val isPlayingThis = (uiState is MainUiState.Playing) && (contentIdInput == item.id)
                                     val cleanIdDisplay = cleanContentId(item.id)
 
