@@ -7,6 +7,7 @@ sealed interface NetworkError {
     data object ServerError : NetworkError
     data object Serialization : NetworkError
     data object Refused : NetworkError
+    data object Premium : NetworkError
     data object Unknown : NetworkError
 }
 
@@ -17,6 +18,7 @@ fun NetworkError.toUiText(): String {
         NetworkError.NoInternet -> "Sin conexión a internet. Comprueba tu red."
         NetworkError.ServerError -> "Error en el servidor. Inténtalo más tarde."
         NetworkError.Serialization -> "Error al procesar los datos recibidos."
+        NetworkError.Premium -> "Necesario versión premium"
         NetworkError.Unknown -> "Ha ocurrido un error desconocido."
         NetworkError.Refused -> "Error, enlace rechazado"
     }

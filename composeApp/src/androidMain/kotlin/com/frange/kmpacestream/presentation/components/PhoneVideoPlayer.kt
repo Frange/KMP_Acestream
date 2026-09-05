@@ -80,18 +80,16 @@ fun PhoneVideoPlayer(
                 detectTapGestures(onDoubleTap = { onToggleFullScreen() })
             }
     ) {
-        // Vista de vídeo nativa de Android sin controladores por defecto para usar nuestra UI personalizada
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     player = exoPlayer
-                    useController = false // Ocultamos la barra nativa de Android para usar la idéntica a Desktop
+                    useController = false
                 }
             },
             modifier = Modifier.fillMaxSize()
         )
 
-        // Botón superior derecho para Pantalla Completa (⛶)
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -103,7 +101,6 @@ fun PhoneVideoPlayer(
             Text(text = "⛶", color = Color.White, fontSize = 22.sp)
         }
 
-        // Barra inferior unificada idéntica a PC y Mac
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -113,7 +110,6 @@ fun PhoneVideoPlayer(
             horizontalArrangement = Arrangement.spacedBy(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón Play / Stop
             Text(
                 text = if (!isPlaying) "▶" else "⏹",
                 color = if (!isPlaying) Color.Green else Color.Red,
@@ -127,7 +123,6 @@ fun PhoneVideoPlayer(
                 }.padding(4.dp)
             )
 
-            // Control de Volumen con Slider
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -155,7 +150,6 @@ fun PhoneVideoPlayer(
                 )
             }
 
-            // Control de Buffer
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("➖", color = Color.Yellow, fontSize = 16.sp, modifier = Modifier.clickable {
                     if (bufferSeconds > 1) { bufferSeconds--; onBufferChanged(bufferSeconds); playMedia() }

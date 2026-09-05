@@ -17,7 +17,15 @@ class AndroidAceStreamRepository(
             val playbackUrl = result.getOrThrow()
             Result.Success(StreamInfo(playbackUrl = playbackUrl))
         } else {
-            Result.Error(NetworkError.Unknown)
+            val errorMessage = result.exceptionOrNull()?.message ?: ""
+
+            val networkError = when {
+                errorMessage.contains("premium", ignoreCase = true) -> NetworkError.Premium
+                errorMessage.contains("refused", ignoreCase = true) -> NetworkError.Refused
+                else -> NetworkError.Unknown
+            }
+
+            Result.Error(networkError)
         }
     }
 }

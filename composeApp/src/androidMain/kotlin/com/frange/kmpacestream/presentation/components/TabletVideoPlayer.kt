@@ -80,18 +80,16 @@ fun TabletVideoPlayer(
                 detectTapGestures(onDoubleTap = { onToggleFullScreen() })
             }
     ) {
-        // Reproductor de vídeo nativo ocupando toda la pantalla de la tablet
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
                     player = exoPlayer
-                    useController = false // Controles personalizados idénticos a las demás plataformas
+                    useController = false
                 }
             },
             modifier = Modifier.fillMaxSize()
         )
 
-        // Botón de pantalla completa (⛶) adaptado al espacio de tablet
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -103,7 +101,6 @@ fun TabletVideoPlayer(
             Text(text = "⛶", color = Color.White, fontSize = 24.sp)
         }
 
-        // Barra inferior unificada y holgada para pantallas grandes
         Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -113,7 +110,6 @@ fun TabletVideoPlayer(
             horizontalArrangement = Arrangement.spacedBy(28.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Botón Play / Stop
             Text(
                 text = if (!isPlaying) "▶" else "⏹",
                 color = if (!isPlaying) Color.Green else Color.Red,
@@ -127,7 +123,6 @@ fun TabletVideoPlayer(
                 }.padding(4.dp)
             )
 
-            // Control de Volumen con Slider (más ancho en tablets)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -155,7 +150,6 @@ fun TabletVideoPlayer(
                 )
             }
 
-            // Control de Buffer
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("➖", color = Color.Yellow, fontSize = 18.sp, modifier = Modifier.clickable {
                     if (bufferSeconds > 1) { bufferSeconds--; onBufferChanged(bufferSeconds); playMedia() }

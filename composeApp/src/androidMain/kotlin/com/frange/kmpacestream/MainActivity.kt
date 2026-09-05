@@ -1,5 +1,7 @@
 package com.frange.kmpacestream
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,8 +27,31 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        handleIntent(intent)
+
         setContent {
             App()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        val data: Uri? = intent?.data
+        if (data != null) {
+            val urlString = data.toString()
+            val cleanId = if (urlString.startsWith("acestream://", ignoreCase = true)) {
+                urlString.removePrefix("acestream://").removePrefix("ACESTREAM://").substringBefore("?").substringBefore("/").trim()
+            } else {
+                urlString.trim()
+            }
+            if (cleanId.isNotBlank()) {
+                viewModel.playContent(cleanId)
+            }
         }
     }
 }

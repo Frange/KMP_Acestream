@@ -1,0 +1,68 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+  <!-- Fondo oscuro elegante -->
+  <path
+      android:pathData="M0,0h108v108h-108z"
+      android:fillColor="#121212"/>
+
+  <!-- Ondas exteriores simulando streaming / red P2P -->
+  <path
+      android:pathData="M34,26 C45,15 63,15 74,26"
+      android:strokeWidth="6"
+      android:strokeColor="#2BA9BC"
+      android:strokeLineCap="round"
+      android:fillColor="@android:color/transparent"/>
+
+  <path
+      android:pathData="M24,36 C41,19 67,19 84,36"
+      android:strokeWidth="6"
+      android:strokeColor="#2BA9BC"
+      android:strokeLineCap="round"
+      android:fillColor="@android:color/transparent"
+      android:strokeAlpha="0.6"/>
+
+  <path
+      android:pathData="M14,46 C37,23 71,23 94,46"
+      android:strokeWidth="6"
+      android:strokeColor="#2BA9BC"
+      android:strokeLineCap="round"
+      android:fillColor="@android:color/transparent"
+      android:strokeAlpha="0.3"/>
+
+  <!-- Triángulo central de reproducción (Play) -->
+  <path
+      android:pathData="M44,34 L72,50 L44,66 Z"
+      android:fillColor="#2BA9BC"/>
+
+  <!-- Letras FRG pequeñas y discretas en la parte inferior -->
+  <!-- F -->
+  <path
+      android:pathData="M37,80 H43 M37,85 H41 M37,80 V92"
+      android:strokeWidth="2"
+      android:strokeColor="#FFFFFF"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:fillColor="@android:color/transparent"/>
+
+  <!-- R -->
+  <path
+      android:pathData="M48,92 V80 H53 C56,80 56,86 53,86 H48 M51,86 L56,92"
+      android:strokeWidth="2"
+      android:strokeColor="#2BA9BC"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:fillColor="@android:color/transparent"/>
+
+  <!-- G -->
+  <path
+      android:pathData="M69,81 C65,79 58,79 58,86 C58,93 65,93 69,91 V86 H64"
+      android:strokeWidth="2"
+      android:strokeColor="#FFFFFF"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:fillColor="@android:color/transparent"/>
+</vector>
